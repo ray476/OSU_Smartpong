@@ -14,6 +14,9 @@ resume = Interface.resume()  # resume from previous checkpoint?
 render = Interface.render()
 collection = Interface.dataCollection()
 
+hyper_params = [H, batch_size, learning_rate, gamma, decay_rate]
+hyper_params = Interface.changeParams(hyper_params)
+
 # model initialization
 D = 80 * 80  # input dimensionality: 80x80 grid
 filename = 'placeholder'
