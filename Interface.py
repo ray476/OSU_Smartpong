@@ -33,10 +33,14 @@ def resume():
 
 
 def askForResumeName():
-    message = input('You have indicated that you wish to resume from a previous checkpoint.\nWhat is the name of the '
-                    'file to resume from? (please include .p file extension in your input) ')
-    if not fileExists(message):
-        print('The file {} does not exists, a new model will be created under that name'.format(message))
+    run = True
+    while run:
+        message = input('You have indicated that you wish to resume from a previous checkpoint.\nWhat is the name of '
+                        'the file to resume from? (please include .p file extension in your input) ')
+        if not fileExists(message):
+            print('The file {} does not exists, please try again.'.format(message))
+        else:
+            run = False
     return message
 
 
