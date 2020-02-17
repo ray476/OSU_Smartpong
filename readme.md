@@ -6,4 +6,4 @@ pong.py config2.txt so that one can use config2.txt to run the attempt. Then one
 save the data and path.
 3.to try another attempt using the command window, one needs to repeat the step 2(assign to
 another config file), so that multiple attempts at the same time are allowed.
-
+4.still working on how to diplay two different correlations.
