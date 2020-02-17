@@ -3,13 +3,40 @@ import numpy as np
 import _pickle as pickle
 import gym
 import Interface
+import argparse
+import os
 
+parser = argparse.ArgumentParser()
+parser.add_argument('config_file', metavar='N', type=str, help='config file for DL algorithm')
+
+def read_config(config_file):
+    assert os.path.exists(config_file), print("ERR: the config file \"{}\" does not exists!".format(config_file))
+    para_keys = ["H", "batch_size", "learning_rate", "gamma", "decay_rate"]
+    paras = {}
+    with open(config_file, "r") as f:
+        for line in f.readlines():
+            infos = line.split("=")
+            paras[infos[0].strip()] = infos[1].strip()
+    assert sorted(para_keys) == sorted(paras.keys()), print("ERR: the config file should only have the following paras:"
+                                                            " \n {}".format(str(para_keys)))
+    return paras
+
+
+args = parser.parse_args()
+paras = read_config(args.config_file)
 # hyperparameters
-H = 300  # number of hidden layer neurons
-batch_size = 7  # every how many episodes to do a param update?
-learning_rate = 5e-4
-gamma = 0.99  # discount factor for reward
-decay_rate = 0.99  # decay factor for RMSProp leaky sum of grad^2
+# H = 300  # number of hidden layer neurons
+# batch_size = 7  # every how many episodes to do a param update?
+# learning_rate = 5e-4
+# gamma = 0.99  # discount factor for reward
+# decay_rate = 0.99  # decay factor for RMSProp leaky sum of grad^2
+
+H = int(paras["H"])
+batch_size = int(paras["batch_size"])
+learning_rate = float(paras["learning_rate"])
+gamma = float(paras["gamma"])  # discount factor for reward
+decay_rate = float(paras["gamma"])  # decay factor for RMSProp leaky sum of grad^2
+
 resume = Interface.resume()  # resume from previous checkpoint?
 render = Interface.render()
 collection = Interface.dataCollection()
