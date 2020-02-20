@@ -150,6 +150,7 @@ def mergeFiles(fileobject, old_file):
     new_file = open(new_file_name, 'r')
     # convert the file to be appended to an array
     new_array = np.loadtxt(new_file)
+    new_file.close()
 
     # add the last episode number from the previous run to every episode number in the new file
     for i in range(new_array.shape[0]):
