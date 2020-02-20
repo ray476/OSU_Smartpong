@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-f = open('new_results', 'r')
+f = open('./first_model/new_results', 'r')
 array = np.loadtxt(f)
 
 fig = plt.figure()

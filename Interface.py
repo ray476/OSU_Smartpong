@@ -1,5 +1,6 @@
 import sys
 import os.path
+import numpy as np
 
 
 def render():
@@ -119,6 +120,7 @@ def changeParams(current_params):
                 current_params[mint-1] = updateParam(names[mint-1])
     return current_params
 
+
 def updateParam(name):
     run = True
     while run:
@@ -128,3 +130,46 @@ def updateParam(name):
         else:
             run = False
     return newVal
+
+
+# takes the current data collection and updates the episode numbers and running mean to include an older data collection
+# file.  Currently, only writes these values to the old file, the current file is left untouched
+# N.B. in the arrays of the text files, 0 is the episode number, 1 is reward sum for that episode and 2 is the mean
+def mergeFiles(fileobject, old_file):
+    # open the previous file
+    original_file = open(old_file, 'r+')
+    original_array = np.loadtxt(original_file)
+    # get the last episode and last mean, episode starts at 0, so increment by 1 or the last_episode_num will be
+    # duplicated
+    last_episode_num = original_array[-1][0] + 1
+    last_mean = original_array[-1][2]
+    # close the file as it is in write mode and the buffer is at the end of the file, re-open in read mode at the head
+    # of the file
+    new_file_name = fileobject.name
+    fileobject.close()
+    new_file = open(new_file_name, 'r')
+    # convert the file to be appended to an array
+    new_array = np.loadtxt(new_file)
+
+    # add the last episode number from the previous run to every episode number in the new file
+    for i in range(new_array.shape[0]):
+        new_array[i][0] += last_episode_num
+
+# it looks like the 'running mean' in the current program is calculated with "running_reward * 0.99 + reward_sum * 0.01"
+# not sure if this is really a mean, come back to this later, but for now use it to stay consistent
+
+    new_array[0][2] = (last_mean * 0.99) + (new_array[0][1] * 0.01)
+    for i in range(1, new_array.shape[0]):
+        new_array[i][2] = (new_array[i-1][2] * 0.99) + (new_array[i][1] * 0.01)
+
+    # https://math.stackexchange.com/questions/22348/how-to-add-and-subtract-values-from-an-average
+    # now to update the running mean, do the first value with the mean from the old file, then loop starting at 1
+    # new_array[0][2] = last_mean + ((new_array[0][1] - last_mean) / new_array[0][0])
+    # for i in range(1, new_array.shape[0]):
+        # new_array[i][2] = new_array[i-1][2] + ((new_array[i][1] - new_array[i-1][2]) / new_array[i][0])
+
+    # now to append the updated new array values to the old file
+    for i in range(new_array.shape[0]):
+        original_file.write('{} {} {}\n'.format(new_array[i][0], new_array[1][1], new_array[i][2]))
+
+    original_file.close()
