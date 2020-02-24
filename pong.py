@@ -5,6 +5,7 @@ import gym
 import Interface
 import argparse
 import os
+import math
 
 parser = argparse.ArgumentParser()
 parser.add_argument('config_file', metavar='N', type=str, help='config file for DL algorithm')
@@ -43,6 +44,10 @@ collection = Interface.dataCollection()
 
 hyper_params = [H, batch_size, learning_rate, gamma, decay_rate]
 hyper_params = Interface.changeParams(hyper_params)
+H = hyper_params[0]
+batch_size = hyper_params[1]
+gamma = hyper_params[2]
+decay_rate = hyper_params[3]
 
 # model initialization
 D = 80 * 80  # input dimensionality: 80x80 grid
@@ -65,6 +70,14 @@ rmsprop_cache = {k: np.zeros_like(v) for k, v in model.items()}  # rmsprop memor
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))  # sigmoid "squashing" function to interval [0,1]
 
+
+def rms(array):
+    result = 0.0
+    for x in array:
+        result += x ** 2
+    result = result/len(array)
+    result = math.sqrt(result)
+    return result
 
 def prepro(I):
     """ prepro 210x160x3 uint8 frame into 6400 (80x80) 1D float vector """
@@ -112,9 +125,11 @@ running_reward = None
 reward_sum = 0
 episode_number = 0
 if collection:
-    data_collect = open(Interface.dcFilename(), 'w')
+    data_collect = open(Interface.dcFilename(), 'w', encoding='utf-8')
+    # variable to hold grad RMS, will be 0 during episodes that dont update weights
+    grad_rms = 0
 try:
-    while True:
+    while episode_number < 2000:
         if render: env.render()
 
         # preprocess the observation, set input to network to be difference image
@@ -166,6 +181,7 @@ try:
                 for k, v in model.items():
                     g = grad_buffer[k]  # gradient
                     rmsprop_cache[k] = decay_rate * rmsprop_cache[k] + (1 - decay_rate) * g ** 2
+                    if k == 'W2' and collection: grad_rms = rms(rmsprop_cache[k])
                     model[k] += learning_rate * g / (np.sqrt(rmsprop_cache[k]) + 1e-5)
                     grad_buffer[k] = np.zeros_like(v)  # reset batch gradient buffer
 
@@ -173,7 +189,10 @@ try:
             running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01
             print('resetting env. episode reward total was %f. running mean: %f' % (reward_sum, running_reward))
             # data write pt 2
-            if collection: data_collect.write('{}\n'.format(running_reward))
+            if collection:
+                data_collect.write('{} {}\n'.format(running_reward, grad_rms))
+                # reset value if not 0 already
+                grad_rms = 0
             if episode_number % 100 == 0: pickle.dump(model, open(filename, 'wb'))
             reward_sum = 0
             observation = env.reset()  # reset env

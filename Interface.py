@@ -125,10 +125,11 @@ def updateParam(name):
     run = True
     while run:
         newVal = input('Please enter the new value for {}'.format(name))
-        if not newVal.isdigit():
-            print('new value must only contain digits (Hint: 1e-3 = 0.001)')
-        else:
-            run = False
+        # if not newVal.isdigit():
+        #     print('new value must only contain digits (Hint: 1e-3 = 0.001)')
+        # else:
+        #     run = False
+        run = False
     return newVal
 
 
