@@ -9,8 +9,6 @@ def string_offsets(ranges):
         return ranges[0] + (ranges[1] - ranges[0]) / 5
 
 
-
-
 def best_fit_linear(X, Y):
 
     xbar = sum(X)/len(X)
