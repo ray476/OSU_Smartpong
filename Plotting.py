@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
-# pulled functions
+# pulled functions from pong.py and plot_test into one file
 
 
 def plot_training_process(episode_number, reward_sum_conllect):
