@@ -125,11 +125,11 @@ running_reward = None
 reward_sum = 0
 episode_number = 0
 if collection:
-    data_collect = open(Interface.dcFilename(), 'w', encoding='utf-8')
+    data_collect = open(Interface.dcFilename(), 'w')
     # variable to hold grad RMS, will be 0 during episodes that dont update weights
     grad_rms = 0
 try:
-    while episode_number < 2000:
+    while episode_number < 3500:
         if render: env.render()
 
         # preprocess the observation, set input to network to be difference image

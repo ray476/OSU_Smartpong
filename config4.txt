@@ -1,5 +1,5 @@
-H = 200
-batch_size = 10
-learning_rate = 1e-4
+H = 300
+batch_size = 4
+learning_rate = 5e-4
 gamma = 0.99
 decay_rate = 0.99
