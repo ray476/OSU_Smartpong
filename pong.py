@@ -1,15 +1,15 @@
 """ Trains an agent with (stochastic) Policy Gradients on Pong. Uses OpenAI Gym. """
 import numpy as np
 import _pickle as pickle
-import gym
+#import gym
 import Interface
 import argparse
-import Plotting
+#import Plotting
 import os
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
-plt.ion() #enable interactive mode
-plt.figure(1)
+# plt.ion() #enable interactive mode
+# plt.figure(1)
 
 # plt.scatter(np.array(range(0,100)), np.array(range(0,100)) + 10, s=3)
 # plt.xlabel("Episode")
@@ -69,6 +69,7 @@ else:
     model['W2'] = np.random.randn(H) / np.sqrt(H)
     pickle.dump(model, open(filename, 'wb'))
 
+print(model)
 grad_buffer = {k: np.zeros_like(v) for k, v in model.items()}  # update buffers that add up gradients over a batch
 rmsprop_cache = {k: np.zeros_like(v) for k, v in model.items()}  # rmsprop memory
 
