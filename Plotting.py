@@ -23,6 +23,13 @@ def plot_training_process(episode_number, reward_sum_conllect):
     plt.pause(0.01)
 
 
+def x_range(range):
+    if range[1] < 0:
+        val = 0 - range[1]
+        return val/2
+    else:
+        return range[1]-5
+
 def string_offsets(ranges):
     if ranges[0] < 0 and ranges[1] < 0:
         return ranges[1] + (ranges[0] - ranges[1]) / 5
@@ -61,6 +68,14 @@ def metric_to_int(metric):
             print('given metric does not match one of the options: reward sum, mean, or cost')
 
 
+def mean_from_reward_sum(array):
+    rewards = array[:, 1]
+    r_sum = np.sum(rewards)
+    final_ep = array[-1][0]
+    mean = r_sum/final_ep
+    print(mean)
+    return mean
+
 # takes in a filename and a metric to plot.  options are 'reward sum' 'mean' or 'cost' this metric is plotted on the
 # y axis vs the episode numbers.  Currently it is on the caller to ensure the provided file contains the desired metric
 # some older data collection files may not have all listed attributes
@@ -69,16 +84,17 @@ def plot_episode_vs_value(filename, value_to_plot):
     f = open(filename, 'r')
     array = np.loadtxt(f)
     # find which metric is going to be the y axis
-    x = metric_to_int(value_to_plot)
-    a, b = best_fit_linear(array[:, 0], array[:, x])
+    # x = metric_to_int(value_to_plot)
+    a, b = best_fit_linear(array[:, 0], array[:, 1])
 
-    plt.plot(array[:, 0], array[:, 1], 'g^')
+    plt.scatter(array[:, 0], array[:, 1], s=6,c='g')
     yfit = [a + b * xi for xi in array[:, 0]]
     plt.plot(array[:, 0], yfit)
-    plt.ylabel('Running Mean')
+    plt.ylabel('Reward')
     plt.xlabel('Episodes')
-    plt.title('Mean vs Episodes')
+    plt.title('Reward vs Episodes')
     # get ranges to scale best fit location
-    plt.text(string_offsets(plt.xlim()), string_offsets(plt.ylim()),
+    plt.text(string_offsets(plt.xlim()), x_range(plt.ylim()),
              'best fit line:\ny = {:.2f} + {:.4f}x'.format(a, b))
+    # plt.text(-5, 500, 'best fit line:\ny = {:.2f} + {:.4f}x'.format(a, b))
     plt.show()

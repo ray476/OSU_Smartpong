@@ -1,75 +1,82 @@
 """ Trains an agent with (stochastic) Policy Gradients on Pong. Uses OpenAI Gym. """
 import numpy as np
 import _pickle as pickle
-#import gym
+import gym
 import Interface
 import argparse
-#import Plotting
+import Plotting
 import os
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+import Database
 
-# plt.ion() #enable interactive mode
-# plt.figure(1)
+plt.ion() #enable interactive mode
+plt.figure(1)
 
-# plt.scatter(np.array(range(0,100)), np.array(range(0,100)) + 10, s=3)
-# plt.xlabel("Episode")
-# plt.ylabel("Net Rewards (points)")
-# plt.pause(0.01)
+plt.scatter(np.array(range(0,100)), np.array(range(0,100)) + 10, s=3)
+plt.xlabel("Episode")
+plt.ylabel("Net Rewards (points)")
+plt.pause(0.01)
 
-parser = argparse.ArgumentParser()
-parser.add_argument('config_file', metavar='N', type=str, help='config file for DL algorithm')
+# parser = argparse.ArgumentParser()
+# parser.add_argument('config_file', metavar='N', type=str, help='config file for DL algorithm')
+#
+#
+# def read_config(config_file):
+#     assert os.path.exists(config_file), print("ERR: the config file \"{}\" does not exists!".format(config_file))
+#     para_keys = ["H", "batch_size", "learning_rate", "gamma", "decay_rate"]
+#     paras = {}
+#     with open(config_file, "r") as f:
+#         for line in f.readlines():
+#             infos = line.split("=")
+#             paras[infos[0].strip()] = infos[1].strip()
+#     assert sorted(para_keys) == sorted(paras.keys()), print("ERR: the config file should only have the following paras:"
+#                                                             " \n {}".format(str(para_keys)))
+#     return paras
 
 
-def read_config(config_file):
-    assert os.path.exists(config_file), print("ERR: the config file \"{}\" does not exists!".format(config_file))
-    para_keys = ["H", "batch_size", "learning_rate", "gamma", "decay_rate"]
-    paras = {}
-    with open(config_file, "r") as f:
-        for line in f.readlines():
-            infos = line.split("=")
-            paras[infos[0].strip()] = infos[1].strip()
-    assert sorted(para_keys) == sorted(paras.keys()), print("ERR: the config file should only have the following paras:"
-                                                            " \n {}".format(str(para_keys)))
-    return paras
-
-
-args = parser.parse_args()
-paras = read_config(args.config_file)
+# args = parser.parse_args()
+# paras = read_config(args.config_file)
 # hyperparameters
-# H = 300  # number of hidden layer neurons
-# batch_size = 7  # every how many episodes to do a param update?
-# learning_rate = 5e-4
-# gamma = 0.99  # discount factor for reward
-# decay_rate = 0.99  # decay factor for RMSProp leaky sum of grad^2
+H = 200  # number of hidden layer neurons
+batch_size = 10  # every how many episodes to do a param update?
+learning_rate = 1e-4
+gamma = 0.99  # discount factor for reward
+decay_rate = 0.99  # decay factor for RMSProp leaky sum of grad^2
 
-H = int(paras["H"])
-batch_size = int(paras["batch_size"])
-learning_rate = float(paras["learning_rate"])
-gamma = float(paras["gamma"])  # discount factor for reward
-decay_rate = float(paras["gamma"])  # decay factor for RMSProp leaky sum of grad^2
+# H = int(paras["H"])
+# batch_size = int(paras["batch_size"])
+# learning_rate = float(paras["learning_rate"])
+# gamma = float(paras["gamma"])  # discount factor for reward
+# decay_rate = float(paras["gamma"])  # decay factor for RMSProp leaky sum of grad^2
 
 resume = Interface.resume()  # resume from previous checkpoint?
 render = Interface.render()
 collection = Interface.dataCollection()
-
+db_connection = Database.establishConnection()
 hyper_params = [H, batch_size, learning_rate, gamma, decay_rate]
-hyper_params = Interface.changeParams(hyper_params)
 
-# model initialization
 D = 80 * 80  # input dimensionality: 80x80 grid
 filename = 'placeholder'
 if resume:
     filename = Interface.askForResumeName()
-    model = pickle.load(open(filename, 'rb'))
+    model = Database.retrieveModel(filename, db_connection)
+    p_row = Database.retrieveParameters(filename, db_connection)
+    for i in range(len(hyper_params)):
+        hyper_params[i] = p_row[i]
     print('resumed from checkpoint')
 else:
     filename = Interface.askForNewName()
+    filename = filename + '.p'
     model = {}
     model['W1'] = np.random.randn(H, D) / np.sqrt(D)  # "Xavier" initialization
     model['W2'] = np.random.randn(H) / np.sqrt(H)
     pickle.dump(model, open(filename, 'wb'))
 
-print(model)
+hyper_params = Interface.changeParams(hyper_params)
+
+# model initialization
+
+
 grad_buffer = {k: np.zeros_like(v) for k, v in model.items()}  # update buffers that add up gradients over a batch
 rmsprop_cache = {k: np.zeros_like(v) for k, v in model.items()}  # rmsprop memory
 
@@ -127,7 +134,7 @@ episode_number = 0
 if collection:
     data_collect = open(Interface.dcFilename(), 'w')
 try:
-    while True:
+    while episode_number < 5:
         if render: env.render()
 
         # preprocess the observation, set input to network to be difference image
@@ -153,9 +160,10 @@ try:
         drs.append(reward)  # record reward (has to be done after we call step() to get reward for previous action)
 
         if done:  # an episode finished
-            if collection: data_collect.write('{} {} '.format(episode_number, reward_sum))
-            episode_number += 1
+            if collection:
+                data_collect.write('{} {} '.format(episode_number, reward_sum))
 
+            episode_number += 1
             # stack together all inputs, hidden states, action gradients, and rewards for this episode
             epx = np.vstack(xs)
             eph = np.vstack(hs)
@@ -188,7 +196,7 @@ try:
             Plotting.plot_training_process(episode_number, reward_sum_conllect)
 
             if collection: data_collect.write('{}\n'.format(running_reward))
-            if episode_number % 100 == 0: pickle.dump(model, open(filename, 'wb'))
+            if episode_number % 100 == 0: Database.updateModel(model, filename, db_connection)
             reward_sum = 0
             observation = env.reset()  # reset env
             prev_x = None
@@ -197,8 +205,9 @@ try:
             print('ep %d: game finished, reward: %f' % (episode_number, reward), '' if reward == -1 else ' !!!!!!!!')
 finally:
     print('Program eneded, closing data collection files and pickling model')
-    pickle.dump(model, open(filename, 'wb'))
-    data_collect.close()
+    Database.updateModel(model, filename, db_connection)
+    if collection:
+        data_collect.close()
     plt.ioff()
     graph_name = filename.split('.')[0] + str(episode_number) + '.png'
     # on the off chance this file somehow already exists add 1

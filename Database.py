@@ -72,11 +72,13 @@ def updateModel(model, model_name, conn):
     blob = pickle.dumps(model)
     sql = """UPDATE Model
         SET pickle = %s
-        WHERE id = %s"""
+        WHERE name = %s"""
     data = (blob, model_name)
+    # cursor.execute(sql, data)
     try:
         cursor.execute(sql, data)
     except:
+        model_name = model_name + '.p'
         pickle.dump(model, open(model_name, 'wb'))
         print('update failed, pickle file of model saved locally')
     conn.commit()

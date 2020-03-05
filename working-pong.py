@@ -9,7 +9,7 @@ batch_size = 3 # every how many episodes to do a param update?
 learning_rate = 5e-4
 gamma = 0.99 # discount factor for reward
 decay_rate = 0.99 # decay factor for RMSProp leaky sum of grad^2
-resume =  True# resume from previous checkpoint?
+resume = False # resume from previous checkpoint?
 render = False
 
 # model initialization

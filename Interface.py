@@ -37,17 +37,17 @@ def askForResumeName():
     run = True
     while run:
         message = input('You have indicated that you wish to resume from a previous checkpoint.\nWhat is the name of '
-                        'the file to resume from? (please include .p file extension in your input) ')
-        if not fileExists(message):
-            print('The file {} does not exists, please try again.'.format(message))
-        else:
-            run = False
+                        'the model to resume from?  ' )
+        run = False
+
     return message
+        # if not fileExists(message):
+        #     print('The file {} does not exists, please try again.'.format(message))
+
 
 
 def askForNewName():
-    message = input('You are about to start with a new model.\nWhat would you like to name it? (please include .p '
-                    'file extension in your input) ')
+    message = input('You are about to start with a new model.\nWhat would you like to name it?')
     run = True
     while fileExists(message) and run:
         m2 = input('A file already exists under this name ({}).  Are you sure you wish to overwrite this file? (y to '
@@ -171,7 +171,7 @@ def mergeFiles(fileobject, old_file):
 
     # now to append the updated new array values to the old file
     for i in range(new_array.shape[0]):
-        original_file.write('{} {} {}\n'.format(new_array[i][0], new_array[1][1], new_array[i][2]))
+        original_file.write('{} {} {}\n'.format(int(new_array[i][0]), int(new_array[i][1]), new_array[i][2]))
 
     original_file.close()
 
