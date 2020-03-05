@@ -17,19 +17,36 @@ def establishConnection():
     return connection
 
 
-# given the connection and the model_name (primary key of model table), retrieve the parameters and pickle associated
+# given the connection and the model_name (primary key of model table), retrieve the parameters  associated
 # with that model, used when continuing from a checkpoint
-def resumeCheckpoint(model_name, conn):
+def retrieveParameters(model_name, conn):
     cursor = conn.cursor()
-    sql = """SELECT *
+    sql = """SELECT node_num, batch_size, learning_rate, gamma, decay
         FROM Model
         WHERE name = %s"""
     data = (model_name,)
     cursor.execute(sql, data)
     row = cursor.fetchone()
-    params = row[2:]
     cursor.close()
     return row
+
+
+def retrieveModel(model_name, conn):
+    cursor = conn.cursor()
+    sql = """SELECT pickle
+         FROM Model
+         WHERE name = %s"""
+    data = (model_name,)
+    cursor.execute(sql, data)
+    row = cursor.fetchall()
+    for each in row:
+        ## The result is also in a tuple
+        for pickledStoredModel in each:
+            ## Unpickle the stored string
+            unpickledModel = pickle.loads(pickledStoredModel)
+            ## compare with original
+    cursor.close()
+    return unpickledModel
 
 
 # takes name, params used, and the model itself and inserts them as a new row, after converting the model to a
@@ -50,3 +67,27 @@ def insertModel(model_name, hyper_params, model, conn):
     cursor.close()
 
 
+def updateModel(model, model_name, conn):
+    cursor = conn.cursor()
+    blob = pickle.dumps(model)
+    sql = """UPDATE Model
+        SET pickle = %s
+        WHERE id = %s"""
+    data = (blob, model_name)
+    try:
+        cursor.execute(sql, data)
+    except:
+        pickle.dump(model, open(model_name, 'wb'))
+        print('update failed, pickle file of model saved locally')
+    conn.commit()
+    cursor.close()
+
+
+def showTables(conn):
+    sql = """
+    SELECT "table_name","column_name", "data_type", "table_schema"
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE "table_schema" = 'public'
+    ORDER BY table_name  
+    """
+    print(pd.read_sql(sql, con=conn))
