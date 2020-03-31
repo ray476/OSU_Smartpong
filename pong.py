@@ -124,6 +124,7 @@ def policy_backward(eph, epdlogp):
 
 
 env = gym.make("Pong-v0")
+
 observation = env.reset()
 prev_x = None  # used in computing the difference frame
 xs, hs, dlogps, drs = [], [], [], []
