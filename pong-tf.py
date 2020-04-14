@@ -8,46 +8,18 @@ import argparse
 import os
 import matplotlib.pyplot as plt
 import Database
+from tensorflow import keras
 
-plt.ion() #enable interactive mode
-plt.figure(1)
-
-plt.scatter(np.array(range(0,100)), np.array(range(0,100)) + 10, s=3)
-plt.xlabel("Episode")
-plt.ylabel("Net Rewards (points)")
-plt.pause(0.01)
-
-# parser = argparse.ArgumentParser()
-# parser.add_argument('config_file', metavar='N', type=str, help='config file for DL algorithm')
-#
-#
-# def read_config(config_file):
-#     assert os.path.exists(config_file), print("ERR: the config file \"{}\" does not exists!".format(config_file))
-#     para_keys = ["H", "batch_size", "learning_rate", "gamma", "decay_rate"]
-#     paras = {}
-#     with open(config_file, "r") as f:
-#         for line in f.readlines():
-#             infos = line.split("=")
-#             paras[infos[0].strip()] = infos[1].strip()
-#     assert sorted(para_keys) == sorted(paras.keys()), print("ERR: the config file should only have the following paras:"
-#                                                             " \n {}".format(str(para_keys)))
-#     return paras
-
-
-# args = parser.parse_args()
-# paras = read_config(args.config_file)
 # hyperparameters
 H = 200  # number of hidden layer neurons
 batch_size = 10  # every how many episodes to do a param update?
 learning_rate = 1e-4
 gamma = 0.99  # discount factor for reward
 decay_rate = 0.99  # decay factor for RMSProp leaky sum of grad^2
+num_episodes = 50
+epsilon = 0.5
+r_avg_list = []
 
-# H = int(paras["H"])
-# batch_size = int(paras["batch_size"])
-# learning_rate = float(paras["learning_rate"])
-# gamma = float(paras["gamma"])  # discount factor for reward
-# decay_rate = float(paras["gamma"])  # decay factor for RMSProp leaky sum of grad^2
 
 resume = Interface.resume()  # resume from previous checkpoint?
 render = Interface.render()
@@ -76,13 +48,16 @@ hyper_params = Interface.changeParams(hyper_params)
 
 # model initialization
 
+model = keras.Sequential(
+    [
+        keras.layers.InputLayer(input_shape=(1, 6400)),
+        keras.layers.Dense(H, activation='relu'),
+        keras.layers.Dense(2, activation='linear')
 
-grad_buffer = {k: np.zeros_like(v) for k, v in model.items()}  # update buffers that add up gradients over a batch
-rmsprop_cache = {k: np.zeros_like(v) for k, v in model.items()}  # rmsprop memory
-
-
-def sigmoid(x):
-    return 1.0 / (1.0 + np.exp(-x))  # sigmoid "squashing" function to interval [0,1]
+    ]
+)
+local_optimizer = keras.optimizers.RMSprop(learning_rate=learning_rate, rho='gamma', )
+model.compile(optimizer=local_optimizer, loss='mse', metrics=['mse'])
 
 
 def prepro(I):
@@ -95,69 +70,40 @@ def prepro(I):
     return I.astype(np.float).ravel()
 
 
-def discount_rewards(r):
-    """ take 1D float array of rewards and compute discounted reward """
-    discounted_r = np.zeros_like(r)
-    running_add = 0
-    for t in reversed(range(0, r.size)):
-        if r[t] != 0: running_add = 0  # reset the sum, since this was a game boundary (pong specific!)
-        running_add = running_add * gamma + r[t]
-        discounted_r[t] = running_add
-    return discounted_r
-
-
-def policy_forward(x):
-    h = np.dot(model['W1'], x)
-    h[h < 0] = 0  # ReLU nonlinearity
-    logp = np.dot(model['W2'], h)
-    p = sigmoid(logp)
-    return p, h  # return probability of taking action 2, and hidden state
-
-
-def policy_backward(eph, epdlogp):
-    """ backward pass. (eph is array of intermediate hidden states) """
-    dW2 = np.dot(eph.T, epdlogp).ravel()
-    dh = np.outer(epdlogp, model['W2'])
-    dh[eph <= 0] = 0  # backpro prelu
-    dW1 = np.dot(dh.T, epx)
-    return {'W1': dW1, 'W2': dW2}
-
-
 env = gym.make("Pong-v0")
 
-observation = env.reset()
 prev_x = None  # used in computing the difference frame
 xs, hs, dlogps, drs = [], [], [], []
 running_reward = None
-reward_sum = 0
 reward_sum_conllect = []
 episode_number = 0
 if collection:
     data_collect = open(Interface.dcFilename(), 'w')
 try:
-    while episode_number < 5:
+    for i in range(num_episodes):
+        observation = env.reset()
+        epsilon *= decay_rate
+        if i % 10 ==0:
+            print('Episode {} of {}'.format(i+1, num_episodes))
+        done = False
+        reward_sum = 0
         if render: env.render()
+        while not done:
+            # preprocess the observation, set input to network to be difference image
+            cur_x = prepro(observation)
+            x = cur_x - prev_x if prev_x is not None else np.zeros(D)
+            prev_x = cur_x
 
-        # preprocess the observation, set input to network to be difference image
-        cur_x = prepro(observation)
-        x = cur_x - prev_x if prev_x is not None else np.zeros(D)
-        prev_x = cur_x
+            # epsilon greedy action selection
+            if np.random.random() < epsilon:
+                action = np.random.randint(2,3)
+            else:
+                action = np.argmax(model.predict(x))
 
-        # forward the policy network and sample an action from the returned probability
-        aprob, h = policy_forward(x)
-        # actions 0,1: nothing 2,4: go up, 3,5: go down
-        action = 2 if np.random.uniform() < aprob else 3  # roll the dice!
-
-        # record various intermediates (needed later for backprop)
-        xs.append(x)  # observation
-        hs.append(h)  # hidden state
-        y = 1 if action == 2 else 0  # a "fake label"
-        dlogps.append(
-            y - aprob)  # grad that encourages the action that was taken to be taken (see http://cs231n.github.io/neural-networks-2/#losses if confused)
-
-        # step the environment and get new measurements
-        observation, reward, done, info = env.step(action)
-        reward_sum += reward
+            observation, reward, done, info = env.step(action)
+            reward_sum += reward
+            target = reward + gamma * np.max(model.predict(x))
+            target_vec = model.predict()
 
         drs.append(reward)  # record reward (has to be done after we call step() to get reward for previous action)
 
@@ -195,12 +141,10 @@ try:
             running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01
             print('resetting env. episode reward total was %f. running mean: %f' % (reward_sum, running_reward))
             reward_sum_conllect.append(reward_sum)
-            Plotting.plot_training_process(episode_number, reward_sum_conllect)
 
             if collection: data_collect.write('{}\n'.format(running_reward))
             if episode_number % 100 == 0: Database.updateModel(model, filename, db_connection)
             reward_sum = 0
-            observation = env.reset()  # reset env
             prev_x = None
 
         if reward != 0:  # Pong has either +1 or -1 reward exactly when game ends.
@@ -210,9 +154,7 @@ finally:
     Database.updateModel(model, filename, db_connection)
     if collection:
         data_collect.close()
-    plt.ioff()
     graph_name = filename.split('.')[0] + str(episode_number) + '.png'
     # on the off chance this file somehow already exists add 1
     if Interface.fileExists(graph_name):
         graph_name = filename.split('.')[0] + str(episode_number + 1) + '.png'
-    plt.savefig(graph_name)
