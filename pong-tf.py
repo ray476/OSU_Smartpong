@@ -58,7 +58,7 @@ model = keras.Sequential(
 )
 local_optimizer = keras.optimizers.RMSprop(learning_rate=learning_rate, rho='gamma', )
 model.compile(optimizer=local_optimizer, loss='mse', metrics=['mse'])
-
+model.summary()
 
 def prepro(I):
     """ prepro 210x160x3 uint8 frame into 6400 (80x80) 1D float vector """
@@ -70,26 +70,54 @@ def prepro(I):
     return I.astype(np.float).ravel()
 
 
-env = gym.make("Pong-v0")
+def discount_rewards(r):
+    """ take 1D float array of rewards and compute discounted reward """
+    discounted_r = np.zeros_like(r)
+    running_add = 0
+    for t in reversed(range(0, r.size)):
+        if r[t] != 0: running_add = 0  # reset the sum, since this was a game boundary (pong specific!)
+        running_add = running_add * gamma + r[t]
+        discounted_r[t] = running_add
+    return discounted_r
 
+env = gym.make("Pong-v0")
+observation = env.reset()
+dimen = 6400
 prev_x = None  # used in computing the difference frame
 xs, hs, dlogps, drs = [], [], [], []
 running_reward = None
 reward_sum_conllect = []
 episode_number = 0
+# placeholders
+states = np.empty(0).reshape(0, dimen)
+actions = np.empty(0).reshape(0, 1)
+rewards = np.empty(0).reshape(0, 1)
+discounted_rewards = np.empty(0).reshape(0, 1)
+losses = []
 if collection:
     data_collect = open(Interface.dcFilename(), 'w')
 try:
     for i in range(num_episodes):
-        observation = env.reset()
-        epsilon *= decay_rate
-        if i % 10 ==0:
-            print('Episode {} of {}'.format(i+1, num_episodes))
-        done = False
-        reward_sum = 0
-        if render: env.render()
-        while not done:
-            # preprocess the observation, set input to network to be difference image
+        # preprocess the observation, set input to network to be difference image
+        cur_x = prepro(observation)
+        x = cur_x - prev_x if prev_x is not None else np.zeros(D)
+        prev_x = cur_x
+        # Append the observations to our batch
+        state = np.reshape(observation, [1, dimen])
+
+        predict = model.predict([state])[0]
+        action = np.random.choice(range(num_actions), p=predict)
+
+        # Append the observations and outputs for learning
+        states = np.vstack([states, state])
+        actions = np.vstack([actions, action])
+
+        # Determine the oucome of our action
+        observation, reward, done, _ = env.step(action)
+        reward_sum += reward
+        rewards = np.vstack([rewards, reward])
+
+        # preprocess the observation, set input to network to be difference image
             cur_x = prepro(observation)
             x = cur_x - prev_x if prev_x is not None else np.zeros(D)
             prev_x = cur_x
@@ -102,10 +130,9 @@ try:
 
             observation, reward, done, info = env.step(action)
             reward_sum += reward
-            target = reward + gamma * np.max(model.predict(x))
-            target_vec = model.predict()
-
-        drs.append(reward)  # record reward (has to be done after we call step() to get reward for previous action)
+            # target = reward + gamma * np.max(model.predict(x))
+            # target_vec = model.predict()
+            drs.append(reward)  # record reward (has to be done after we call step() to get reward for previous action)
 
         if done:  # an episode finished
             if collection:

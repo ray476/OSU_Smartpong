@@ -47,7 +47,7 @@ def askForResumeName():
 
 
 def askForNewName():
-    message = input('You are about to start with a new model.\nWhat would you like to name it?')
+    message = input('You are about to start with a new model.\nWhat would you like to name it? ')
     run = True
     while fileExists(message) and run:
         m2 = input('A file already exists under this name ({}).  Are you sure you wish to overwrite this file? (y to '

@@ -195,7 +195,7 @@ try:
             running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01
             print('resetting env. episode reward total was %f. running mean: %f' % (reward_sum, running_reward))
             reward_sum_conllect.append(reward_sum)
-            Plotting.plot_training_process(episode_number, reward_sum_conllect)
+            # Plotting.plot_training_process(episode_number, reward_sum_conllect)
 
             if collection: data_collect.write('{}\n'.format(running_reward))
             if episode_number % 100 == 0: Database.updateModel(model, filename, db_connection)

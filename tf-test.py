@@ -106,7 +106,7 @@ def q_learning_keras(env, num_episodes=1000):
         if i % 100 == 0:
             print("Episode {} of {}".format(i + 1, num_episodes))
         done = False
-        r_sum =
+        r_sum = 0
         while not done:
             if np.random.random() < eps:
                 a = np.random.randint(0, 2)
