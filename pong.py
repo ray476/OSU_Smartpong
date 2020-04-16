@@ -1,3 +1,4 @@
+# %%
 """ Trains an agent with (stochastic) Policy Gradients on Pong. Uses OpenAI Gym. """
 import numpy as np
 import _pickle as pickle
@@ -16,11 +17,11 @@ plt.figure(1)
 # plt.ylabel("Net Rewards (points)")
 # plt.pause(0.01)
 
-parser = argparse.ArgumentParser()
-parser.add_argument('config_file', metavar='N', type=str, help='config file for DL algorithm')
+# parser = argparse.ArgumentParser()
+# parser.add_argument('config_file', metavar='N', type=str, help='config file for DL algorithm')
 
 
-def read_config(config_file):
+def read_config(config_file = 'config1.txt'):
     assert os.path.exists(config_file), print("ERR: the config file \"{}\" does not exists!".format(config_file))
     para_keys = ["H", "batch_size", "learning_rate", "gamma", "decay_rate"]
     paras = {}
@@ -33,8 +34,11 @@ def read_config(config_file):
     return paras
 
 
-args = parser.parse_args()
-paras = read_config(args.config_file)
+# args = parser.parse_args()
+# paras = read_config(args.config_file)
+
+paras = read_config()
+
 # hyperparameters
 # H = 300  # number of hidden layer neurons
 # batch_size = 7  # every how many episodes to do a param update?
@@ -76,16 +80,14 @@ rmsprop_cache = {k: np.zeros_like(v) for k, v in model.items()}  # rmsprop memor
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))  # sigmoid "squashing" function to interval [0,1]
 
-
 def prepro(I):
-    """ prepro 210x160x3 uint8 frame into 6400 (80x80) 1D float vector """
+    """ prepro 210x160x3 uint8 frame into 1600 (40x40) 1D float vector """
     I = I[35:195]  # crop
-    I = I[::2, ::2, 0]  # downsample by factor of 2
+    I = I[::4, ::4, 0]  # downsample by factor of 4
     I[I == 144] = 0  # erase background (background type 1)
     I[I == 109] = 0  # erase background (background type 2)
     I[I != 0] = 1  # everything else (paddles, ball) just set to 1
     return I.astype(np.float).ravel()
-
 
 def discount_rewards(r):
     """ take 1D float array of rewards and compute discounted reward """
@@ -115,8 +117,19 @@ def policy_backward(eph, epdlogp):
     return {'W1': dW1, 'W2': dW2}
 
 
+
+# %%
+
 env = gym.make("Pong-v0")
 observation = env.reset()
+# plt.imshow(observation)
+
+# %%
+# cur_x = prepro(observation)
+# plt.imshow(cur_x)
+
+
+# %%
 prev_x = None  # used in computing the difference frame
 xs, hs, dlogps, drs = [], [], [], []
 running_reward = None
@@ -131,6 +144,7 @@ try:
 
         # preprocess the observation, set input to network to be difference image
         cur_x = prepro(observation)
+
         x = cur_x - prev_x if prev_x is not None else np.zeros(D)
         prev_x = cur_x
 
