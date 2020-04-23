@@ -51,9 +51,9 @@ hyper_params = Interface.changeParams(hyper_params)
 model = keras.Sequential(
     [
         keras.layers.InputLayer(input_shape=(1, 6400)),
-        keras.layers.Dense(H, activation='relu'),
-        keras.layers.Dense(2, activation='linear')
-
+        keras.layers.Flatten(),
+        keras.layers.Dense(H, activation='relu', input_shape=(1, 6400)),
+        keras.layers.Dense(2, activation='linear', input_shape=(1, H)),
     ]
 )
 local_optimizer = keras.optimizers.RMSprop(learning_rate=learning_rate, rho='gamma', )
@@ -83,9 +83,11 @@ def discount_rewards(r):
 env = gym.make("Pong-v0")
 observation = env.reset()
 dimen = 6400
+num_actions = env.action_space.n
 prev_x = None  # used in computing the difference frame
 xs, hs, dlogps, drs = [], [], [], []
 running_reward = None
+reward_sum = 0
 reward_sum_conllect = []
 episode_number = 0
 # placeholders
@@ -103,9 +105,9 @@ try:
         x = cur_x - prev_x if prev_x is not None else np.zeros(D)
         prev_x = cur_x
         # Append the observations to our batch
-        state = np.reshape(observation, [1, dimen])
+        state = np.reshape(x, [1, dimen])
 
-        predict = model.predict([state])[0]
+        predict = model.predict([x])[0]
         action = np.random.choice(range(num_actions), p=predict)
 
         # Append the observations and outputs for learning
@@ -117,52 +119,31 @@ try:
         reward_sum += reward
         rewards = np.vstack([rewards, reward])
 
-        # preprocess the observation, set input to network to be difference image
-            cur_x = prepro(observation)
-            x = cur_x - prev_x if prev_x is not None else np.zeros(D)
-            prev_x = cur_x
-
-            # epsilon greedy action selection
-            if np.random.random() < epsilon:
-                action = np.random.randint(2,3)
-            else:
-                action = np.argmax(model.predict(x))
-
-            observation, reward, done, info = env.step(action)
-            reward_sum += reward
-            # target = reward + gamma * np.max(model.predict(x))
-            # target_vec = model.predict()
-            drs.append(reward)  # record reward (has to be done after we call step() to get reward for previous action)
-
         if done:  # an episode finished
             if collection:
                 data_collect.write('{} {} '.format(episode_number, reward_sum))
 
             episode_number += 1
-            # stack together all inputs, hidden states, action gradients, and rewards for this episode
-            epx = np.vstack(xs)
-            eph = np.vstack(hs)
-            epdlogp = np.vstack(dlogps)
-            epr = np.vstack(drs)
-            xs, hs, dlogps, drs = [], [], [], []  # reset array memory
+            discounted_rewards_episode = discount_rewards(rewards)
+            discounted_rewards = np.vstack([discounted_rewards, discounted_rewards_episode])
+            rewards = np.empty(0).reshape(0, 1)
 
-            # compute the discounted reward backwards through time
-            discounted_epr = discount_rewards(epr)
-            # standardize the rewards to be unit normal (helps control the gradient estimator variance)
-            discounted_epr -= np.mean(discounted_epr)
-            discounted_epr /= np.std(discounted_epr)
-
-            epdlogp *= discounted_epr  # modulate the gradient with advantage (PG magic happens right here.)
-            grad = policy_backward(eph, epdlogp)
-            for k in model: grad_buffer[k] += grad[k]  # accumulate grad over batch
-
-            # perform rmsprop parameter update every batch_size episodes
             if episode_number % batch_size == 0:
-                for k, v in model.items():
-                    g = grad_buffer[k]  # gradient
-                    rmsprop_cache[k] = decay_rate * rmsprop_cache[k] + (1 - decay_rate) * g ** 2
-                    model[k] += learning_rate * g / (np.sqrt(rmsprop_cache[k]) + 1e-5)
-                    grad_buffer[k] = np.zeros_like(v)  # reset batch gradient buffer
+                discounted_rewards -= discounted_rewards.mean()
+                discounted_rewards /= discounted_rewards.std()
+                discounted_rewards = discounted_rewards.squeeze()
+                actions = actions.squeeze().astype(int)
+
+                actions_train = np.zeros([len(actions), num_actions])
+                actions_train[np.arange(len(actions)), actions] = 1
+
+                loss = model.train_on_batch([states, discounted_rewards], actions_train)
+                losses.append(loss)
+
+                # Clear out game variables
+                states = np.empty(0).reshape(0, dimen)
+                actions = np.empty(0).reshape(0, 1)
+                discounted_rewards = np.empty(0).reshape(0, 1)
 
             # boring book-keeping
             running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01

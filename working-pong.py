@@ -68,7 +68,7 @@ xs,hs,dlogps,drs = [],[],[],[]
 running_reward = None
 reward_sum = 0
 episode_number = 0
-data_collect = open('3_batch2.txt', 'w')
+data_collect = open('3_batch-v2.2.txt', 'w')
 
 while episode_number < 1000:
   if render: env.render()

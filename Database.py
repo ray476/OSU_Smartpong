@@ -2,8 +2,10 @@ import psycopg2
 import pandas as pd
 import _pickle as pickle
 
+show_columns_model = ['name', 'node_num', 'batch_size', 'learning_rate', 'gamma', 'decay']
 
 def establishConnection():
+    print('establishing database connection')
     try:
         connection = psycopg2.connect(
             host = 'osu-smartpong-db.coppbwdukw7p.us-east-2.rds.amazonaws.com',
@@ -14,6 +16,7 @@ def establishConnection():
             )
     except:
         print('unable to connect')
+    print('connection successfully established')
     return connection
 
 
@@ -93,3 +96,10 @@ def showTables(conn):
     ORDER BY table_name  
     """
     print(pd.read_sql(sql, con=conn))
+
+
+def showModels(conn):
+    sql2 = """
+    SELECT * FROM model
+    """
+    print(pd.read_sql(sql2, con=conn, index_col=show_columns_model))
