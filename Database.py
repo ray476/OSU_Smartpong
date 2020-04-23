@@ -6,7 +6,7 @@ import numpy as np
 show_columns_model = ['name', 'node_num', 'batch_size', 'learning_rate', 'gamma', 'decay']
 
 def establishConnection():
-    print('establishing database connection')
+    print('\nestablishing database connection ...')
     try:
         connection = psycopg2.connect(
             host = 'osu-smartpong-db.coppbwdukw7p.us-east-2.rds.amazonaws.com',
@@ -16,8 +16,8 @@ def establishConnection():
             database = 'smartpong_db'
             )
     except:
-        print('unable to connect')
-    print('connection successfully established')
+        print('unable to connect\n')
+    print('connection successfully established\n')
     return connection
 
 

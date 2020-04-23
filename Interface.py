@@ -105,8 +105,8 @@ def changeParams(current_params):
     run = True
     while run:
         message = input(
-            'The current hyper parameters are as follows:\n1. {}: {}\n2. {}: {}\n3. {}: {}\n4. {}: {}\n5. {}: {}\n'
-            'Type the number next to the parameter you wish to change or 0 to continue. '.format(names[0],
+            '\nThe current hyper parameters are as follows:\n1. {}: {}\n2. {}: {}\n3. {}: {}\n4. {}: {}\n5. {}: {}\n'
+            'Type the number next to the parameter you wish to change or 0 to continue.'.format(names[0],
             current_params[0], names[1], current_params[1], names[2], current_params[2], names[3], current_params[3], names[4], current_params[4]))
         if not (message.isdigit()):
             print('Input not a digit\n')
@@ -124,7 +124,7 @@ def changeParams(current_params):
 def updateParam(name):
     run = True
     while run:
-        newVal = input('Please enter the new value for {}'.format(name))
+        newVal = input('Please enter the new value for {} '.format(name))
         if not newVal.isdigit():
             print('new value must only contain digits (Hint: 1e-3 = 0.001)')
         else:

@@ -8,6 +8,7 @@ import argparse
 import os
 import matplotlib.pyplot as plt
 import Database
+import time
 
 plt.ion() #enable interactive mode
 plt.figure(1)
@@ -16,6 +17,8 @@ plt.scatter(np.array(range(0,100)), np.array(range(0,100)) + 10, s=3)
 plt.xlabel("Episode")
 plt.ylabel("Net Rewards (points)")
 plt.pause(0.01)
+
+display_timing = False;
 
 # parser = argparse.ArgumentParser()
 # parser.add_argument('config_file', metavar='N', type=str, help='config file for DL algorithm')
@@ -137,7 +140,6 @@ if collection:
 try:
     while episode_number < 5:
         if render: env.render()
-
         # preprocess the observation, set input to network to be difference image
         cur_x = prepro(observation)
         x = cur_x - prev_x if prev_x is not None else np.zeros(D)
@@ -193,7 +195,11 @@ try:
 
             # boring book-keeping
             running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01
-            print('resetting env. episode reward total was %f. running mean: %f' % (reward_sum, running_reward))
+            if reward_sum >= 0:
+                print('\n\nGame {} is over.  The net score was {} so you won the game.  The current running mean is {}\n'.format(episode_number, reward_sum, running_reward))
+            else:
+                print('\n\nGame {} is over.  The net score was {} so you lost the game.  The current running mean is {}\n'.format(episode_number, reward_sum, running_reward))
+
             reward_sum_conllect.append(reward_sum)
             # Plotting.plot_training_process(episode_number, reward_sum_conllect)
 
@@ -204,7 +210,11 @@ try:
             prev_x = None
 
         if reward != 0:  # Pong has either +1 or -1 reward exactly when game ends.
-            print('ep %d: game finished, reward: %f' % (episode_number, reward), '' if reward == -1 else ' !!!!!!!!')
+            if reward == -1:
+                print('game {}: rally finished, You Lost!!'.format(episode_number))
+            elif reward == 1:
+                print('game {}: rally finished, You Won!!'.format(episode_number))
+
 finally:
     print('Program eneded, closing data collection files and pickling model')
     Database.updateModel(model, filename, db_connection)
