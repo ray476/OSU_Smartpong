@@ -1,6 +1,7 @@
 import psycopg2
 import pandas as pd
 import _pickle as pickle
+import numpy as np
 
 show_columns_model = ['name', 'node_num', 'batch_size', 'learning_rate', 'gamma', 'decay']
 
@@ -103,3 +104,20 @@ def showModels(conn):
     SELECT * FROM model
     """
     print(pd.read_sql(sql2, con=conn, index_col=show_columns_model))
+
+
+# used for inserting files into a database without the file name in the file
+def insertData(conn, model_name, file_name):
+    cursor = conn.cursor()
+    file = open(file_name, 'r')
+    file_arr = np.loadtxt(file)
+    for i in range(file_arr.shape[0]):
+        sql = """
+            INSERT INTO Data
+            VALUES (%s, %s, %s)"""
+        ep = int(file_arr[i][0])
+        reward = int(file_arr[i][1])
+        data = (model_name, ep, reward)
+        cursor.execute(sql, data)
+    conn.commit()
+    cursor.close()
