@@ -86,7 +86,7 @@ def dataCollection():
 
 
 def dcFilename():
-    message = input('Please enter the name of the file you would like to have the data written to ')
+    message = input('\nPlease enter the name of the file you would like to have the data written to ')
     run = True
     while fileExists(message) and run:
         m2 = input('A file already exists under this name ({}).  Are you sure you wish to overwrite this file? (y to '
@@ -97,6 +97,7 @@ def dcFilename():
             message = input('Please enter the name of the file you would like to have the data written to ')
         else:
             print('input not understood.  Please use y or Y for yes and n or N for no ')
+    print('\n')
     return message
 
 
@@ -105,9 +106,9 @@ def changeParams(current_params):
     run = True
     while run:
         message = input(
-            '\nThe current hyper parameters are as follows:\n1. {}: {}\n2. {}: {}\n3. {}: {}\n4. {}: {}\n5. {}: {}\n'
-            'Type the number next to the parameter you wish to change or 0 to continue.'.format(names[0],
-            current_params[0], names[1], current_params[1], names[2], current_params[2], names[3], current_params[3], names[4], current_params[4]))
+            '\nThe default hyper parameters are as follows:\n1. {}: {}\n2. {}: {}\n3. {}: {}\n4. {}: {}\n5. {}: {}\n'
+            'You will not be change them once the model is created\nType the number next to the parameter you wish to '
+            'change or 0 to continue. '.format(names[0], current_params[0], names[1], current_params[1], names[2], current_params[2], names[3], current_params[3], names[4], current_params[4]))
         if not (message.isdigit()):
             print('Input not a digit\n')
         else:
@@ -119,6 +120,12 @@ def changeParams(current_params):
             else:
                 current_params[mint-1] = updateParam(names[mint-1])
     return current_params
+
+
+def showParams(current_params):
+    names = ['# of hidden nodes', 'Batch size', 'Learning rate', 'Discount factor', 'Decay rate']
+    print('\nThe hyper parameters associated with this model are:\n1. {}: {}\n2. {}: {}\n3. {}: {}\n4. {}: {}\n5. {}: {}\n'.
+          format(names[0],current_params[0], names[1], current_params[1], names[2], current_params[2], names[3], current_params[3], names[4], current_params[4]))
 
 
 def updateParam(name):

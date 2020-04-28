@@ -50,6 +50,7 @@ def retrieveModel(model_name, conn):
             unpickledModel = pickle.loads(pickledStoredModel)
             ## compare with original
     cursor.close()
+    print('model loaded from database successfully')
     return unpickledModel
 
 

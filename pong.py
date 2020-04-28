@@ -18,8 +18,6 @@ plt.xlabel("Episode")
 plt.ylabel("Net Rewards (points)")
 plt.pause(0.01)
 
-display_timing = False;
-
 # parser = argparse.ArgumentParser()
 # parser.add_argument('config_file', metavar='N', type=str, help='config file for DL algorithm')
 #
@@ -66,7 +64,7 @@ if resume:
     p_row = Database.retrieveParameters(filename, db_connection)
     for i in range(len(hyper_params)):
         hyper_params[i] = p_row[i]
-    print('resumed from checkpoint')
+    Interface.showParams(hyper_params)
 else:
     filename = Interface.askForNewName()
     filename = filename + '.p'
@@ -74,12 +72,10 @@ else:
     model['W1'] = np.random.randn(H, D) / np.sqrt(D)  # "Xavier" initialization
     model['W2'] = np.random.randn(H) / np.sqrt(H)
     pickle.dump(model, open(filename, 'wb'))
+    hyper_params = Interface.changeParams(hyper_params)
 
-hyper_params = Interface.changeParams(hyper_params)
 
 # model initialization
-
-
 grad_buffer = {k: np.zeros_like(v) for k, v in model.items()}  # update buffers that add up gradients over a batch
 rmsprop_cache = {k: np.zeros_like(v) for k, v in model.items()}  # rmsprop memory
 
@@ -127,7 +123,6 @@ def policy_backward(eph, epdlogp):
 
 
 env = gym.make("Pong-v0")
-
 observation = env.reset()
 prev_x = None  # used in computing the difference frame
 xs, hs, dlogps, drs = [], [], [], []
@@ -137,8 +132,10 @@ reward_sum_conllect = []
 episode_number = 0
 if collection:
     data_collect = open(Interface.dcFilename(), 'w')
+print('------------------Starting Training------------------\n')
 try:
     while episode_number < 5:
+        start_time = time.time()
         if render: env.render()
         # preprocess the observation, set input to network to be difference image
         cur_x = prepro(observation)
@@ -164,6 +161,7 @@ try:
         drs.append(reward)  # record reward (has to be done after we call step() to get reward for previous action)
 
         if done:  # an episode finished
+            elapsed_time = time.time() - start_time
             if collection:
                 data_collect.write('{} {} '.format(episode_number, reward_sum))
 
@@ -196,9 +194,11 @@ try:
             # boring book-keeping
             running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01
             if reward_sum >= 0:
-                print('\n\nGame {} is over.  The net score was {} so you won the game.  The current running mean is {}\n'.format(episode_number, reward_sum, running_reward))
+                print('\nGame {} is over, it took {} seconds.  The net score was {} so you won the game.  The current '
+                      'running mean is {}\n'.format(episode_number-1, elapsed_time, reward_sum, running_reward))
             else:
-                print('\n\nGame {} is over.  The net score was {} so you lost the game.  The current running mean is {}\n'.format(episode_number, reward_sum, running_reward))
+                print('\nGame {} is over, it took {} seconds.  The net score was {} so you lost the game.  The '
+                      'current running mean is {}\n'.format(episode_number, elapsed_time, reward_sum, running_reward))
 
             reward_sum_conllect.append(reward_sum)
             # Plotting.plot_training_process(episode_number, reward_sum_conllect)
@@ -211,9 +211,9 @@ try:
 
         if reward != 0:  # Pong has either +1 or -1 reward exactly when game ends.
             if reward == -1:
-                print('game {}: rally finished, You Lost!!'.format(episode_number))
+                print('game {}: rally finished, The opponent scored a point!!'.format(episode_number))
             elif reward == 1:
-                print('game {}: rally finished, You Won!!'.format(episode_number))
+                print('game {}: rally finished, You scored a point!!'.format(episode_number))
 
 finally:
     print('Program eneded, closing data collection files and pickling model')
