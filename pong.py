@@ -9,14 +9,16 @@ import os
 import matplotlib.pyplot as plt
 import Database
 import time
+import psycopg2
 
-plt.ion() #enable interactive mode
-plt.figure(1)
 
-plt.scatter(np.array(range(0,100)), np.array(range(0,100)) + 10, s=3)
-plt.xlabel("Episode")
-plt.ylabel("Net Rewards (points)")
-plt.pause(0.01)
+# plt.ion() #enable interactive mode
+# plt.figure(1)
+#
+# plt.scatter(np.array(range(0,100)), np.array(range(0,100)) + 10, s=3)
+# plt.xlabel("Episode")
+# plt.ylabel("Net Rewards (points)")
+# plt.pause(0.01)
 
 # parser = argparse.ArgumentParser()
 # parser.add_argument('config_file', metavar='N', type=str, help='config file for DL algorithm')
@@ -52,22 +54,24 @@ decay_rate = 0.99  # decay factor for RMSProp leaky sum of grad^2
 
 resume = Interface.resume()  # resume from previous checkpoint?
 render = Interface.render()
-collection = Interface.dataCollection()
-db_connection = Database.establishConnection()
+# collection = Interface.dataCollection()
+db_connection = Database.Database()
 hyper_params = [H, batch_size, learning_rate, gamma, decay_rate]
 
 D = 80 * 80  # input dimensionality: 80x80 grid
 filename = 'placeholder'
 if resume:
     filename = Interface.askForResumeName()
-    model = Database.retrieveModel(filename, db_connection)
-    p_row = Database.retrieveParameters(filename, db_connection)
+    model = db_connection.retrieveModel(filename)
+    episode_number = db_connection.lastEpisode(filename)
+    p_row = db_connection.retrieveParameters(filename)
     for i in range(len(hyper_params)):
         hyper_params[i] = p_row[i]
     Interface.showParams(hyper_params)
 else:
     filename = Interface.askForNewName()
     filename = filename + '.p'
+    episode_number = 0
     model = {}
     model['W1'] = np.random.randn(H, D) / np.sqrt(D)  # "Xavier" initialization
     model['W2'] = np.random.randn(H) / np.sqrt(H)
@@ -129,9 +133,7 @@ xs, hs, dlogps, drs = [], [], [], []
 running_reward = None
 reward_sum = 0
 reward_sum_conllect = []
-episode_number = 0
-if collection:
-    data_collect = open(Interface.dcFilename(), 'w')
+data_collect = open('local_data.txt', 'w')
 print('------------------Starting Training------------------\n')
 try:
     while episode_number < 5:
@@ -161,11 +163,10 @@ try:
         drs.append(reward)  # record reward (has to be done after we call step() to get reward for previous action)
 
         if done:  # an episode finished
-            elapsed_time = time.time() - start_time
-            if collection:
-                data_collect.write('{} {} '.format(episode_number, reward_sum))
-
             episode_number += 1
+            elapsed_time = time.time() - start_time
+            data_collect.write('{} {} '.format(episode_number, reward_sum))
+
             # stack together all inputs, hidden states, action gradients, and rewards for this episode
             epx = np.vstack(xs)
             eph = np.vstack(hs)
@@ -203,8 +204,7 @@ try:
             reward_sum_conllect.append(reward_sum)
             # Plotting.plot_training_process(episode_number, reward_sum_conllect)
 
-            if collection: data_collect.write('{}\n'.format(running_reward))
-            if episode_number % 100 == 0: Database.updateModel(model, filename, db_connection)
+            data_collect.write('{}\n'.format(running_reward))
             reward_sum = 0
             observation = env.reset()  # reset env
             prev_x = None
@@ -217,12 +217,17 @@ try:
 
 finally:
     print('Program eneded, closing data collection files and pickling model')
-    Database.updateModel(model, filename, db_connection)
-    if collection:
-        data_collect.close()
-    plt.ioff()
-    graph_name = filename.split('.')[0] + str(episode_number) + '.png'
-    # on the off chance this file somehow already exists add 1
-    if Interface.fileExists(graph_name):
-        graph_name = filename.split('.')[0] + str(episode_number + 1) + '.png'
-    plt.savefig(graph_name)
+    if resume:
+        db_connection.updateModel(model, filename)
+    else:
+        model_name = filename[:-2]
+        db_connection.insertModel(model_name, hyper_params, model)
+    data_collect.close()
+    db_connection.insertData(filename, 'local_data.txt')
+    db_connection.connection.close()
+    # plt.ioff()
+    # graph_name = filename.split('.')[0] + str(episode_number) + '.png'
+    # # on the off chance this file somehow already exists add 1
+    # if Interface.fileExists(graph_name):
+    #     graph_name = filename.split('.')[0] + str(episode_number + 1) + '.png'
+    # plt.savefig(graph_name)

@@ -1,7 +1,7 @@
 import sys
 import os.path
 import numpy as np
-
+import Database
 
 def render():
     run = True
@@ -33,11 +33,11 @@ def resume():
     return result
 
 
-def askForResumeName():
+def askForResumeName(DBconnection):
     run = True
     while run:
-        message = input('You have indicated that you wish to resume from a previous checkpoint.\nWhat is the name of '
-                        'the model to resume from?  ' )
+        message = input('You have indicated that you wish to resume from a previous checkpoint.\nPlease select a name from the list below  ' )
+        Database.showModels(DBconnection)
         run = False
 
     return message
