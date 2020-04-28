@@ -96,6 +96,7 @@ class Database:
         print(pd.read_sql(sql, con=self.connection))
 
     def showModels(self):
+        print('retrieving models ... ')
         sql2 = """
         SELECT * FROM model
         """
@@ -123,10 +124,10 @@ class Database:
         sql = """
         SELECT MAX(episode_num)
         FROM data
-        WHERE %s"""
+        WHERE model_name = %s"""
         data = (model_name,)
         cursor.execute(sql, data)
         result = cursor.fetchall()
         ep_num = result[0][0]
-        print('resuming model {} from episode {}'.format(model_name, ep_num))
+        print('resuming model \'{}\' from episode {}'.format(model_name, ep_num))
         return ep_num

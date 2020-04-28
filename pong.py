@@ -53,32 +53,32 @@ decay_rate = 0.99  # decay factor for RMSProp leaky sum of grad^2
 # decay_rate = float(paras["gamma"])  # decay factor for RMSProp leaky sum of grad^2
 
 resume = Interface.resume()  # resume from previous checkpoint?
-render = Interface.render()
+
 # collection = Interface.dataCollection()
 db_connection = Database.Database()
 hyper_params = [H, batch_size, learning_rate, gamma, decay_rate]
 
 D = 80 * 80  # input dimensionality: 80x80 grid
-filename = 'placeholder'
+model_name = 'placeholder'
 if resume:
-    filename = Interface.askForResumeName()
-    model = db_connection.retrieveModel(filename)
-    episode_number = db_connection.lastEpisode(filename)
-    p_row = db_connection.retrieveParameters(filename)
+    model_name = Interface.askForResumeName(db_connection)
+    model = db_connection.retrieveModel(model_name)
+    episode_number = db_connection.lastEpisode(model_name)
+    p_row = db_connection.retrieveParameters(model_name)
     for i in range(len(hyper_params)):
         hyper_params[i] = p_row[i]
     Interface.showParams(hyper_params)
 else:
-    filename = Interface.askForNewName()
-    filename = filename + '.p'
+    model_name = Interface.askForNewName()
+    model_name = model_name + '.p'
     episode_number = 0
     model = {}
     model['W1'] = np.random.randn(H, D) / np.sqrt(D)  # "Xavier" initialization
     model['W2'] = np.random.randn(H) / np.sqrt(H)
-    pickle.dump(model, open(filename, 'wb'))
+    pickle.dump(model, open(model_name, 'wb'))
     hyper_params = Interface.changeParams(hyper_params)
 
-
+render = Interface.render()
 # model initialization
 grad_buffer = {k: np.zeros_like(v) for k, v in model.items()}  # update buffers that add up gradients over a batch
 rmsprop_cache = {k: np.zeros_like(v) for k, v in model.items()}  # rmsprop memory
@@ -136,8 +136,8 @@ reward_sum_conllect = []
 data_collect = open('local_data.txt', 'w')
 print('------------------Starting Training------------------\n')
 try:
-    while episode_number < 5:
-        start_time = time.time()
+    start_time = time.time()
+    while True:
         if render: env.render()
         # preprocess the observation, set input to network to be difference image
         cur_x = prepro(observation)
@@ -165,6 +165,7 @@ try:
         if done:  # an episode finished
             episode_number += 1
             elapsed_time = time.time() - start_time
+            start_time = time.time()
             data_collect.write('{} {} '.format(episode_number, reward_sum))
 
             # stack together all inputs, hidden states, action gradients, and rewards for this episode
@@ -195,10 +196,10 @@ try:
             # boring book-keeping
             running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01
             if reward_sum >= 0:
-                print('\nGame {} is over, it took {} seconds.  The net score was {} so you won the game.  The current '
+                print('\nGame {} is over, it took {} seconds.\nThe net score was {} so you won the game.\nThe current '
                       'running mean is {}\n'.format(episode_number-1, elapsed_time, reward_sum, running_reward))
             else:
-                print('\nGame {} is over, it took {} seconds.  The net score was {} so you lost the game.  The '
+                print('\nGame {} is over, it took {} seconds.\nThe net score was {} so you lost the game.\nThe '
                       'current running mean is {}\n'.format(episode_number, elapsed_time, reward_sum, running_reward))
 
             reward_sum_conllect.append(reward_sum)
@@ -216,14 +217,16 @@ try:
                 print('game {}: rally finished, You scored a point!!'.format(episode_number))
 
 finally:
-    print('Program eneded, closing data collection files and pickling model')
+    print('\n-------------------Ending Training-------------------\n')
+
+    print('Program eneded, closing data collection files and pickling model\n\n')
     if resume:
-        db_connection.updateModel(model, filename)
+        db_connection.updateModel(model, model_name)
     else:
-        model_name = filename[:-2]
+        model_name = model_name[:-2]
         db_connection.insertModel(model_name, hyper_params, model)
     data_collect.close()
-    db_connection.insertData(filename, 'local_data.txt')
+    db_connection.insertData(model_name, 'local_data.txt')
     db_connection.connection.close()
     # plt.ioff()
     # graph_name = filename.split('.')[0] + str(episode_number) + '.png'

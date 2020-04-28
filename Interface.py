@@ -36,8 +36,9 @@ def resume():
 def askForResumeName(DBconnection):
     run = True
     while run:
-        message = input('You have indicated that you wish to resume from a previous checkpoint.\nPlease select a name from the list below  ' )
-        Database.showModels(DBconnection)
+        print('You have indicated that you wish to resume from a previous checkpoint.\nPlease select a name from the list below:  ' )
+        DBconnection.showModels()
+        message = input()
         run = False
 
     return message
