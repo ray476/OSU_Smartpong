@@ -3,6 +3,7 @@ import os.path
 import numpy as np
 import Database
 
+# determines if the game will be rendered
 def render():
     run = True
     while run:
@@ -18,6 +19,7 @@ def render():
     return result
 
 
+# same but for resume
 def resume():
     run = True
     while run:
@@ -32,7 +34,7 @@ def resume():
             print('input not understood.  Please use y or Y for yes and n or N for no ')
     return result
 
-
+# prints all models in the current model table of the database, then ask which model to load
 def askForResumeName(DBconnection):
     run = True
     while run:
@@ -42,11 +44,10 @@ def askForResumeName(DBconnection):
         run = False
 
     return message
-        # if not fileExists(message):
-        #     print('The file {} does not exists, please try again.'.format(message))
 
 
-
+# ask for a new name to name to model,  needs converted to work with the database, checking the model table as opposed
+# to looking for a local file with the same name
 def askForNewName():
     message = input('You are about to start with a new model.\nWhat would you like to name it? ')
     run = True
@@ -70,7 +71,7 @@ def fileExists(name):
     else:
         return False
 
-
+# no longer used, data is now always stored in the database
 def dataCollection():
     run = True
     while run:
@@ -85,7 +86,7 @@ def dataCollection():
             print('input not understood.  Please use y or Y for yes and n or N for no ')
     return result
 
-
+# same as above
 def dcFilename():
     message = input('\nPlease enter the name of the file you would like to have the data written to ')
     run = True
@@ -101,7 +102,7 @@ def dcFilename():
     print('\n')
     return message
 
-
+# allows the hyper parameters to be modified for a new model before starting training
 def changeParams(current_params):
     names = ['# of hidden nodes', 'Batch size', 'Learning rate', 'Discount factor', 'Decay rate']
     run = True
@@ -140,6 +141,8 @@ def updateParam(name):
     return newVal
 
 
+# -------old function, user beware----------------
+# should not be needed anymore with changing over to the database for data collection and storage
 # takes the current data collection and updates the episode numbers and running mean to include an older data collection
 # file.  Currently, only writes these values to the old file, the current file is left untouched
 # N.B. in the arrays of the text files, 0 is the episode number, 1 is reward sum for that episode and 2 is the mean
@@ -183,7 +186,7 @@ def mergeFiles(fileobject, old_file):
 
     original_file.close()
 
-
+# same as above
 def mergeFilesNoMean(fileobject, old_file):
     # open the previous file
     original_file = open(old_file, 'r+')

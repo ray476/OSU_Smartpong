@@ -68,6 +68,7 @@ def metric_to_int(metric):
             print('given metric does not match one of the options: reward sum, mean, or cost')
 
 
+# not used
 def mean_from_reward_sum(array):
     rewards = array[:, 1]
     r_sum = np.sum(rewards)
@@ -76,10 +77,10 @@ def mean_from_reward_sum(array):
     print(mean)
     return mean
 
-# takes in a filename and a metric to plot.  options are 'reward sum' 'mean' or 'cost' this metric is plotted on the
-# y axis vs the episode numbers.  Currently it is on the caller to ensure the provided file contains the desired metric
-# some older data collection files may not have all listed attributes
-def plot_episode_vs_value(filename, value_to_plot):
+
+# takes in a filename and produces a graph of rewards vs episodes and plots a linear best fit line.  the text
+# location attempts to scale off the range of the graph, but it is not perfect.
+def plot_episode_vs_reward(filename):
     # open file and load into array
     f = open(filename, 'r')
     array = np.loadtxt(f)

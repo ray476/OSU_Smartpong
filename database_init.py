@@ -17,7 +17,7 @@ Database.showTables(connection)
 # print('drops done')
 # Database.showTables(connection)
 
-# cursor.execute("""CREATE TABLE Model(
+# cursor.execute("""CREATE TABLE Models(
 #     name varchar(32) PRIMARY KEY,
 #     pickle bytea,
 #     node_num int,
@@ -26,10 +26,9 @@ Database.showTables(connection)
 #     gamma real,
 #      decay real)""")
 # cursor.execute("""CREATE TABLE data(
-#     model_name varchar(32)  REFERENCES model(name),
+#     model_name varchar(32)  REFERENCES models(name),
 #     episode_num int,
-#     reward int,
-#     running_mean real)""")
+#     reward int)""")
 # connection.commit()
 # again check result
 # print('tables created')

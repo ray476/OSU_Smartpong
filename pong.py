@@ -12,31 +12,6 @@ import time
 import psycopg2
 
 
-# plt.ion() #enable interactive mode
-# plt.figure(1)
-#
-# plt.scatter(np.array(range(0,100)), np.array(range(0,100)) + 10, s=3)
-# plt.xlabel("Episode")
-# plt.ylabel("Net Rewards (points)")
-# plt.pause(0.01)
-
-# parser = argparse.ArgumentParser()
-# parser.add_argument('config_file', metavar='N', type=str, help='config file for DL algorithm')
-#
-#
-# def read_config(config_file):
-#     assert os.path.exists(config_file), print("ERR: the config file \"{}\" does not exists!".format(config_file))
-#     para_keys = ["H", "batch_size", "learning_rate", "gamma", "decay_rate"]
-#     paras = {}
-#     with open(config_file, "r") as f:
-#         for line in f.readlines():
-#             infos = line.split("=")
-#             paras[infos[0].strip()] = infos[1].strip()
-#     assert sorted(para_keys) == sorted(paras.keys()), print("ERR: the config file should only have the following paras:"
-#                                                             " \n {}".format(str(para_keys)))
-#     return paras
-
-
 # args = parser.parse_args()
 # paras = read_config(args.config_file)
 # hyperparameters
@@ -46,15 +21,9 @@ learning_rate = 1e-4
 gamma = 0.99  # discount factor for reward
 decay_rate = 0.99  # decay factor for RMSProp leaky sum of grad^2
 
-# H = int(paras["H"])
-# batch_size = int(paras["batch_size"])
-# learning_rate = float(paras["learning_rate"])
-# gamma = float(paras["gamma"])  # discount factor for reward
-# decay_rate = float(paras["gamma"])  # decay factor for RMSProp leaky sum of grad^2
-
 resume = Interface.resume()  # resume from previous checkpoint?
 
-# collection = Interface.dataCollection()
+# establish database connection
 db_connection = Database.Database()
 hyper_params = [H, batch_size, learning_rate, gamma, decay_rate]
 
@@ -217,6 +186,8 @@ try:
                 print('game {}: rally finished, You scored a point!!'.format(episode_number))
 
 finally:
+    # since the program is stopped with a keyboard interrupt, this allows all open files and database connections
+    # to be updated, then closed correctly
     print('\n-------------------Ending Training-------------------\n')
 
     print('Program eneded, closing data collection files and pickling model\n\n')
@@ -228,9 +199,3 @@ finally:
     data_collect.close()
     db_connection.insertData(model_name, 'local_data.txt')
     db_connection.connection.close()
-    # plt.ioff()
-    # graph_name = filename.split('.')[0] + str(episode_number) + '.png'
-    # # on the off chance this file somehow already exists add 1
-    # if Interface.fileExists(graph_name):
-    #     graph_name = filename.split('.')[0] + str(episode_number + 1) + '.png'
-    # plt.savefig(graph_name)

@@ -11,11 +11,11 @@ class Database:
         print('\nestablishing database connection ...')
         try:
             self.connection = psycopg2.connect(
-                host='osu-smartpong-db.coppbwdukw7p.us-east-2.rds.amazonaws.com',
+                host='example-database.coppbwdukw7p.us-east-2.rds.amazonaws.com',
                 port=5432,
-                user='smartpong',
-                password='jvg08tgCZhWBnlEa2Qj9',
-                database='smartpong_db'
+                user='example_admin',
+                password='BFeSMXdvwj83K27P408z',
+                database='example_db'
             )
         except:
             print('unable to connect\n')
@@ -69,6 +69,7 @@ class Database:
         self.connection.commit()
         cursor.close()
 
+# tries to update the pickled model in the model table, if some issues occurs, the model is saved locally
     def updateModel(self, model, model_name):
         cursor = self.connection.cursor()
         blob = pickle.dumps(model)
@@ -102,14 +103,14 @@ class Database:
         """
         print(pd.read_sql(sql2, con=self.connection, index_col=show_columns_model))
 
-    # used for inserting files into a database
+    # used for inserting files into a database, needs more than one episode of data or else it seems to  have issues
     def insertData(self, model_name, file_name):
         cursor = self.connection.cursor()
         file = open(file_name, 'r')
         file_arr = np.loadtxt(file)
         for i in range(file_arr.shape[0]):
             sql = """
-                INSERT INTO Data
+                INSERT INTO results_data
                 VALUES (%s, %s, %s)"""
             ep = int(file_arr[i][0])
             reward = int(file_arr[i][1])
@@ -123,7 +124,7 @@ class Database:
         cursor = self.connection.cursor()
         sql = """
         SELECT MAX(episode_num)
-        FROM data
+        FROM results_data
         WHERE model_name = %s"""
         data = (model_name,)
         cursor.execute(sql, data)
@@ -131,3 +132,26 @@ class Database:
         ep_num = result[0][0]
         print('resuming model \'{}\' from episode {}'.format(model_name, ep_num))
         return ep_num
+
+
+if __name__ == "__main__":
+    print('adding tables')
+    db_connection = Database()
+    cursor = db_connection.connection.cursor()
+    cursor.execute("""CREATE TABLE Model(
+        name varchar(32) PRIMARY KEY,
+        pickle bytea,
+        node_num int,
+        batch_size int,
+        learning_rate real,
+        gamma real,
+         decay real)""")
+
+    cursor.execute("""CREATE TABLE results_data(
+        model_name varchar(32)  REFERENCES model(name),
+        episode_num int,
+        reward int)""")
+
+    db_connection.connection.commit()
+    print('tables created')
+    db_connection.showTables()
