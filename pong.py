@@ -3,7 +3,6 @@ import numpy as np
 import _pickle as pickle
 import gym
 import Interface
-import argparse
 # import Plotting
 import os
 import matplotlib.pyplot as plt
@@ -12,8 +11,6 @@ import time
 import psycopg2
 
 
-# args = parser.parse_args()
-# paras = read_config(args.config_file)
 # hyperparameters
 H = 200  # number of hidden layer neurons
 batch_size = 10  # every how many episodes to do a param update?
