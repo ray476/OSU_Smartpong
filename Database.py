@@ -11,11 +11,11 @@ class Database:
         print('\nestablishing database connection ...')
         try:
             self.connection = psycopg2.connect(
-                host='example-database.coppbwdukw7p.us-east-2.rds.amazonaws.com',
+                host='osu-smartpong-db.coppbwdukw7p.us-east-2.rds.amazonaws.com',
                 port=5432,
-                user='example_admin',
-                password='BFeSMXdvwj83K27P408z',
-                database='example_db'
+                user='smartpong',
+                password='jvg08tgCZhWBnlEa2Qj9',
+                database='smartpong_db'
             )
         except:
             print('unable to connect\n')
